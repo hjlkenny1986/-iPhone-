@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>八宅派命卦查询</title>
+    <style>
+        body {
+            font-family: "微软雅黑", sans-serif;
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+            border-bottom: 3px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .gender-group {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        input[type="radio"] {
+            display: none;
+        }
+
+        .gender-btn {
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        input[type="radio"]:checked + .gender-btn {
+            border-color: #1a73e8;
+            color: #1a73e8;
+            font-weight: 600;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #1557b0;
+        }
+
+        #result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 17px;
+            line-height: 1.6;
+        }
+
+        .dongsi {
+            color: #008000;
+            background-color: #f0fff0;
+            border: 1px solid #ceffce;
+        }
+
+        .xisi {
+            color: #ff0000;
+            background-color: #fff0f0;
+            border: 1px solid #ffcece;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>八宅派命卦查询</h1>
+        <form id="queryForm">
+            <div class="form-group">
+                <label for="birthYear">请输入出生年份（公历）</label>
+                <input type="number" id="birthYear" min="1900" max="2100" required placeholder="例如：1985">
+            </div>
+
+            <div class="form-group gender-group">
+                <label>选择性别</label>
+                <div class="gender-btn-group">
+                    <input type="radio" id="male" name="gender" value="male" checked>
+                    <label for="male" class="gender-btn">男</label>
+
+                    <input type="radio" id="female" name="gender" value="female">
+                    <label for="female" class="gender-btn">女</label>
+                </div>
+            </div>
+
+            <button type="button" onclick="calculate()">立即查询</button>
+        </form>
+
+        <div id="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        function calculate() {
+            const birthYear = parseInt(document.getElementById('birthYear').value);
+            const gender = document.querySelector('input[name="gender"]:checked').value;
+            const resultDiv = document.getElementById('result');
+            let msg = '';
+            let isDongsi; // 定义isDongsi变量
+
+            // 验证年份有效性
+            if (isNaN(birthYear) || birthYear < 1900 || birthYear > 2100) {
+                msg = '请输入1900-2100之间的有效年份！';
+                resultDiv.className = '';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = msg;
+                return;
+            }
+
+            let numberSum, stepResult;
+
+            // 男性命卦计算逻辑
+            if (gender === 'male') {
+                numberSum = birthYear.toString().split('').reduce((acc, curr) => acc + parseInt(curr), 0);
+                stepResult = numberSum > 9 ? numberSum.toString().split('').reduce((a, c) => a + parseInt(c), 0) : numberSum;
+                stepResult = 11 - stepResult;
+                stepResult = stepResult > 9 ? stepResult - 9 : stepResult;
+                
+                // 处理特殊情况：余数为5时对应坤卦（西四命）
+                if (stepResult === 5) {
+                    msg = `您的命卦为坤卦，属于<strong>西四命</strong>！`;
+                    isDongsi = false;
+                } else {
+                    isDongsi = [1, 3, 4, 9].includes(stepResult);
+                    const卦名 = ['坎', '坤', '震', '巽', '坤/艮', '乾', '兑', '艮', '离'][stepResult - 1];
+                    msg = `您的命卦为${卦名}卦，属于<strong>${isDongsi ? '东四命' : '西四命'}</strong>！`;
+                }
+            } 
+            // 女性命卦计算逻辑
+            else {
+                numberSum = birthYear.toString().split('').reduce((acc, curr) => acc + parseInt(curr), 0);
+                stepResult = numberSum > 9 ? numberSum.toString().split('').reduce((a, c) => a + parseInt(c), 0) : numberSum;
+                stepResult = 4 + stepResult;
+                stepResult = stepResult > 9 ? stepResult - 9 : stepResult;
+                
+                // 处理特殊情况：余数为5时对应艮卦（西四命）
+                if (stepResult === 5) {
+                    msg = `您的命卦为艮卦，属于<strong>西四命</strong>！`;
+                    isDongsi = false;
+                } else {
+                    isDongsi = [1, 3, 4, 9].includes(stepResult);
+                    const卦名 = ['坎', '坤', '震', '巽', '艮', '乾', '兑', '艮', '离'][stepResult - 1];
+                    msg = `您的命卦为${卦名}卦，属于<strong>${isDongsi ? '东四命' : '西四命'}</strong>！`;
+                }
+            }
+
+            // 显示结果
+            resultDiv.className = isDongsi ? 'dongsi' : 'xisi';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `根据八宅派理论，<br>出生年份：${birthYear}<br>性别：${gender === 'male' ? '男' : '女'}<br><br>${msg}`;
+        }
+    </script>
+</body>
+</html>    

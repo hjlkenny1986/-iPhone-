@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>易经八卦占卜</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- 配置Tailwind自定义主题 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#8B4513',
+            secondary: '#D2B48C',
+            accent: '#CD853F',
+            neutral: '#F5F5DC',
+            dark: '#3C2A21'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            serif: ['"Noto Serif SC"', 'serif']
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .hexagram-shadow {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+      }
+      .btn-hover {
+        transition: all 0.3s ease;
+      }
+      .btn-hover:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      }
+      .hexagram-animation {
+        animation: fadeIn 0.8s ease-in-out;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    }
+  </style>
+</head>
+<body class="bg-neutral min-h-screen font-serif text-dark">
+  <!-- 页面容器 -->
+  <div class="container mx-auto px-4 py-8 max-w-4xl">
+    <!-- 头部 -->
+    <header class="text-center mb-12">
+      <h1 class="text-[clamp(2rem,5vw,3.5rem)] font-bold text-primary mb-4">易经八卦占卜</h1>
+      <p class="text-lg text-dark/70 max-w-2xl mx-auto">探索《易经》智慧，随机生成卦象与变爻</p>
+    </header>
+    
+    <!-- 主要内容区 -->
+    <main class="bg-white rounded-2xl p-6 md:p-8 hexagram-shadow mb-10">
+      <!-- 卦象选择区 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+        <!-- 上卦区域 -->
+        <div class="bg-neutral/50 rounded-xl p-6 hexagram-shadow">
+          <h2 class="text-xl font-bold text-primary mb-4 flex items-center">
+            <i class="fa fa-arrow-up mr-2"></i>上卦
+          </h2>
+          <div id="upperHexagram" class="text-[clamp(3rem,8vw,5rem)] text-center font-bold mb-6 h-24 flex items-center justify-center hexagram-animation">?</div>
+          <button id="upperBtn" class="w-full bg-primary hover:bg-primary/90 text-white py-3 px-6 rounded-lg font-medium btn-hover flex items-center justify-center">
+            <i class="fa fa-random mr-2"></i>随机上卦
+          </button>
+        </div>
+        
+        <!-- 下卦区域 -->
+        <div class="bg-neutral/50 rounded-xl p-6 hexagram-shadow">
+          <h2 class="text-xl font-bold text-primary mb-4 flex items-center">
+            <i class="fa fa-arrow-down mr-2"></i>下卦
+          </h2>
+          <div id="lowerHexagram" class="text-[clamp(3rem,8vw,5rem)] text-center font-bold mb-6 h-24 flex items-center justify-center hexagram-animation">?</div>
+          <button id="lowerBtn" class="w-full bg-primary hover:bg-primary/90 text-white py-3 px-6 rounded-lg font-medium btn-hover flex items-center justify-center">
+            <i class="fa fa-random mr-2"></i>随机下卦
+          </button>
+        </div>
+      </div>
+      
+      <!-- 卦名显示区 -->
+      <div class="bg-secondary/30 rounded-xl p-6 mb-10 hexagram-shadow">
+        <h2 class="text-xl font-bold text-primary mb-4 flex items-center">
+          <i class="fa fa-book mr-2"></i>卦名
+        </h2>
+        <div id="hexagramName" class="text-[clamp(2rem,5vw,3rem)] text-center font-bold py-6 hexagram-animation">?</div>
+      </div>
+      
+      <!-- 变卦区域 -->
+      <div class="bg-neutral/50 rounded-xl p-6 mb-10 hexagram-shadow">
+        <h2 class="text-xl font-bold text-primary mb-4 flex items-center">
+          <i class="fa fa-exchange mr-2"></i>变卦
+        </h2>
+        <div id="changingLines" class="text-[clamp(1.5rem,4vw,2.5rem)] text-center font-bold mb-6 h-24 flex items-center justify-center hexagram-animation">?</div>
+        <button id="changeBtn" class="w-full bg-accent hover:bg-accent/90 text-white py-3 px-6 rounded-lg font-medium btn-hover flex items-center justify-center">
+          <i class="fa fa-magic mr-2"></i>随机变卦
+        </button>
+      </div>
+      
+      <!-- 重置按钮 -->
+      <div class="text-center">
+        <button id="resetBtn" class="bg-dark hover:bg-dark/90 text-white py-3 px-8 rounded-lg font-medium btn-hover flex items-center mx-auto">
+          <i class="fa fa-refresh mr-2"></i>重新开始
+        </button>
+      </div>
+    </main>
+    
+    <!-- 页脚 -->
+    <footer class="text-center text-dark/60 text-sm">
+      <p>《易经》智慧 · 随机占卜</p>
+      <p class="mt-2">仅供娱乐，不代表专业命理建议</p>
+    </footer>
+  </div>
+
+  <script>
+    // 八卦元素
+    const ELEMENTS = ['天', '泽', '火', '雷', '风', '水', '山', '地'];
+    
+    // 卦名映射表
+    const HEXAGRAM_NAMES = {
+      // 相同上下卦的情况
+      '天天': '乾为天',
+      '地地': '坤为地',
+      '泽泽': '兑为泽',
+      '水水': '坎为水',
+      '山山': '艮为山',
+      '火火': '离为火',
+      '雷雷': '震为雷',
+      '风风': '巽为风',
+      
+      // 其他组合
+      '天风': '姤',
+      '天山': '遁',
+      '天地': '否',
+      '风地': '观',
+      '山地': '剥',
+      '火地': '晋',
+      '火天': '大有',
+      
+      '水泽': '节',
+      '水雷': '屯',
+      '水火': '既济',
+      '泽火': '革',
+      '雷火': '丰',
+      '地火': '明夷',
+      '地水': '师',
+      
+      '山火': '贲',
+      '山天': '大畜',
+      '山泽': '损',
+      '火泽': '睽',
+      '天泽': '履',
+      '风泽': '中孚',
+      '风山': '渐',
+      
+      '雷地': '豫',
+      '雷水': '解',
+      '雷风': '恒',
+      '地风': '升',
+      '水风': '井',
+      '泽风': '大过',
+      '泽雷': '随',
+      
+      '风天': '小畜',
+      '风火': '家人',
+      '风雷': '益',
+      '天雷': '无妄',
+      '火雷': '噬嗑',
+      '山雷': '颐',
+      '山风': '蛊',
+      
+      '火山': '旅',
+      '火风': '鼎',
+      '火水': '未济',
+      '山水': '蒙',
+      '风水': '涣',
+      '天水': '讼',
+      '天火': '同人',
+      
+      '地雷': '复',
+      '地泽': '临',
+      '地天': '泰',
+      '雷天': '大壮',
+      '泽天': '夬',
+      '水天': '需',
+      '水地': '比',
+      
+      '泽水': '困',
+      '泽地': '萃',
+      '泽山': '咸',
+      '水山': '蹇',
+      '地山': '谦',
+      '雷山': '小过',
+      '雷泽': '归妹'
+    };
+    
+    // DOM元素
+    const upperHexagram = document.getElementById('upperHexagram');
+    const lowerHexagram = document.getElementById('lowerHexagram');
+    const hexagramName = document.getElementById('hexagramName');
+    const changingLines = document.getElementById('changingLines');
+    const upperBtn = document.getElementById('upperBtn');
+    const lowerBtn = document.getElementById('lowerBtn');
+    const changeBtn = document.getElementById('changeBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    
+    // 随机选择一个元素
+    function getRandomElement() {
+      const randomIndex = Math.floor(Math.random() * ELEMENTS.length);
+      return ELEMENTS[randomIndex];
+    }
+    
+    // 显示随机上卦
+    upperBtn.addEventListener('click', () => {
+      const element = getRandomElement();
+      upperHexagram.textContent = element;
+      updateHexagramName();
+      animateElement(upperHexagram);
+    });
+    
+    // 显示随机下卦
+    lowerBtn.addEventListener('click', () => {
+      const element = getRandomElement();
+      lowerHexagram.textContent = element;
+      updateHexagramName();
+      animateElement(lowerHexagram);
+    });
+    
+    // 更新卦名
+    function updateHexagramName() {
+      const upper = upperHexagram.textContent;
+      const lower = lowerHexagram.textContent;
+      
+      if (upper !== '?' && lower !== '?') {
+        const key = upper + lower;
+        const name = HEXAGRAM_NAMES[key] || '未知卦象';
+        
+        // 添加"为"字逻辑
+        let displayName = name;
+        if (upper === lower && name.includes('为')) {
+          displayName = `${upper}${lower}${name}`;
+        } else {
+          displayName = `${upper}${lower}${name}`;
+        }
+        
+        hexagramName.textContent = displayName;
+        animateElement(hexagramName);
+      }
+    }
+    
+    // 变卦功能
+    changeBtn.addEventListener('click', () => {
+      const randomNum = Math.floor(Math.random() * 7); // 0-6
+      let result = '';
+      
+      if (randomNum === 0) {
+        result = '没有变爻';
+      } else if (randomNum === 6) {
+        result = '六爻全变';
+      } else if (randomNum <= 5) {
+        // 随机选择randomNum个不同的爻位
+        const positions = [1, 2, 3, 4, 5, 6];
+        const selectedPositions = [];
+        
+        while (selectedPositions.length < randomNum) {
+          const randomIndex = Math.floor(Math.random() * positions.length);
+          const selected = positions.splice(randomIndex, 1)[0];
+          selectedPositions.push(selected);
+        }
+        
+        // 排序后生成结果文本
+        selectedPositions.sort((a, b) => a - b);
+        result = selectedPositions.map(pos => `${pos}爻变`).join('、');
+      }
+      
+      changingLines.textContent = result;
+      animateElement(changingLines);
+    });
+    
+    // 重置功能
+    resetBtn.addEventListener('click', () => {
+      upperHexagram.textContent = '?';
+      lowerHexagram.textContent = '?';
+      hexagramName.textContent = '?';
+      changingLines.textContent = '?';
+      
+      // 重置动画
+      const elements = [upperHexagram, lowerHexagram, hexagramName, changingLines];
+      elements.forEach(el => {
+        el.classList.remove('hexagram-animation');
+        void el.offsetWidth; // 触发重绘
+        el.classList.add('hexagram-animation');
+      });
+    });
+    
+    // 动画效果函数
+    function animateElement(element) {
+      element.classList.remove('hexagram-animation');
+      void element.offsetWidth; // 触发重绘
+      element.classList.add('hexagram-animation');
+    }
+  </script>
+</body>
+</html>
+    

@@ -379,7 +379,7 @@
           result = '没有变爻'; changingPositions = [];
         } else {
           changingPositions = [randomNum]; // 1~6，对应第randomNum爻，从下往上
-          result = `第${randomNum}爻变`;
+          result = `${randomNum}爻变`;
         }
         changingLines.textContent = result;
         updateChangingHexagramArea(upper, lower, changingPositions);

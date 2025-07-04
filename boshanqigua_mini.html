@@ -48,6 +48,9 @@
     }
     @keyframes yinChange { 0%{background-color:#3C2A21;} 100%{background-color:#F59E42;} }
     .btn-active { transform: translateY(1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08);}
+    .note-area { width: 100%; min-height: 50px; border-radius: 6px; padding: 6px 10px; margin-bottom: 10px; border:1px solid #d6bb7b;}
+    .history-item { border-bottom: 1px solid #e9d8a6; padding-bottom: 14px; margin-bottom: 16px; }
+    .history-item:last-child { border-bottom: none; }
   </style>
 </head>
 <body class="bg-yellow-100 min-h-screen font-serif text-gray-900">
@@ -58,6 +61,7 @@
     </header>
     <main class="bg-white rounded-2xl p-6 md:p-8 hexagram-shadow mb-10">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+        <!-- 上卦、下卦 -->
         <div class="bg-yellow-100/50 rounded-xl p-6 hexagram-shadow">
           <h2 class="text-xl font-bold text-yellow-800 mb-4 flex items-center">
             <i class="fa fa-arrow-up mr-2"></i>上卦
@@ -91,6 +95,7 @@
         <div id="hexagramDiagram" class="hexagram-container hexagram-animation min-h-[130px]"></div>
         <div id="hexagramDescription" class="text-center text-gray-900/80 mt-2 hexagram-animation">请选择上下卦查看详细信息</div>
       </div>
+      <!-- 变卦区，包含变爻按钮 -->
       <div class="bg-yellow-100/50 rounded-xl p-6 mb-10 hexagram-shadow">
         <h2 class="text-xl font-bold text-yellow-800 mb-4 flex items-center">
           <i class="fa fa-exchange mr-2"></i>变卦
@@ -102,8 +107,18 @@
           <div id="changingHexagramDescription" class="text-center text-gray-900/80 mt-2 hexagram-animation"></div>
         </div>
         <button id="changeBtn" class="w-full bg-orange-700 hover:bg-orange-600 text-white py-3 px-6 rounded-lg font-medium btn-hover flex items-center justify-center mt-4">
-          <i class="fa fa-magic mr-2"></i>随机变卦
+          <i class="fa fa-magic mr-2"></i>随机变爻
         </button>
+        <textarea id="noteInput" class="note-area mt-6" placeholder="可以写下你的问题、心情或占卦时的情况..."></textarea>
+        <button id="saveBtn" class="bg-green-700 hover:bg-green-600 text-white py-2 px-6 rounded-lg font-medium btn-hover flex items-center justify-center mt-2">
+          <i class="fa fa-save mr-2"></i>保存本次卦象和笔记
+        </button>
+      </div>
+      <div class="bg-yellow-100/70 rounded-xl p-6 mb-10 hexagram-shadow">
+        <h2 class="text-xl font-bold text-yellow-800 mb-4 flex items-center">
+          <i class="fa fa-history mr-2"></i>历史记录
+        </h2>
+        <div id="historyArea"></div>
       </div>
       <div class="text-center">
         <button id="resetBtn" class="bg-gray-900 hover:bg-gray-800 text-white py-3 px-8 rounded-lg font-medium btn-hover flex items-center mx-auto">
@@ -118,18 +133,17 @@
   </div>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // 符合传统自下而上顺序的八卦爻码
+      // 八卦基础
       const ELEMENTS = {
-        '天': [1,1,1],   // 三阳
-        '地': [0,0,0],   // 三阴
-        '泽': [1,1,0],   // 阳阳阴
-        '火': [1,0,1],   // 阳阴阳
-        '雷': [1,0,0],   // 阳阴阴
-        '风': [0,1,1],   // 阴阳阳
-        '水': [0,1,0],   // 阴阳阴
-        '山': [0,0,1]    // 阴阴阳
+        '天': [1,1,1],
+        '地': [0,0,0],
+        '泽': [1,1,0],
+        '火': [1,0,1],
+        '雷': [1,0,0],
+        '风': [0,1,1],
+        '水': [0,1,0],
+        '山': [0,0,1]
       };
-
       const HEXAGRAM_NAMES = {};
       const HEXAGRAM_DESCRIPTIONS = {};
       const ALL_HEXAGRAMS = [
@@ -193,27 +207,24 @@
         { key: '水天', name: '水天需', desc: '事缓则圆，耐心等待。' },
         { key: '天雷', name: '天雷无妄', desc: '无妄之灾，顺其自然。' },
         { key: '雷天', name: '雷天大壮', desc: '壮志凌云，奋发向前。' },
-        { key: '水雷', name: '水雷屯', desc: '万物始生，艰难起步。' },     
+        { key: '水雷', name: '水雷屯', desc: '万物始生，艰难起步。' }
       ];
-      // 自动填充映射
       for (const item of ALL_HEXAGRAMS) {
         HEXAGRAM_NAMES[item.key] = item.name;
         HEXAGRAM_DESCRIPTIONS[item.name] = item.desc;
       }
-      // 自动补齐所有64卦映射
       const ELEMENT_KEYS = Object.keys(ELEMENTS);
       for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
           const low = ELEMENT_KEYS[i];
           const up = ELEMENT_KEYS[j];
-          const key = up + low; // 修正：上卦在前，下卦在后
+          const key = up + low;
           if (!HEXAGRAM_NAMES[key]) {
             HEXAGRAM_NAMES[key] = `${up}为${low}`;
-            HEXAGRAM_DESCRIPTIONS[HEXAGRAM_NAMES[key]] = '暂未录入';
+            HEXAGRAM_DESCRIPTIONS[key] = '暂未录入';
           }
         }
       }
-
       const upperHexagram = document.getElementById('upperHexagram');
       const lowerHexagram = document.getElementById('lowerHexagram');
       const hexagramName = document.getElementById('hexagramName');
@@ -229,12 +240,55 @@
       const hexagramDiagram = document.getElementById('hexagramDiagram');
       const changingHexagramDiagram = document.getElementById('changingHexagramDiagram');
       const changingHexagramDescription = document.getElementById('changingHexagramDescription');
-
-      function renderHexagramLines(upper, lower, container, changingPositions = []) {
+      const noteInput = document.getElementById('noteInput');
+      const saveBtn = document.getElementById('saveBtn');
+      const historyArea = document.getElementById('historyArea');
+      function getElementByLines(lines) {
+        for (const [element, lineArray] of Object.entries(ELEMENTS)) {
+          if (lines.length === lineArray.length && lines.every((v, i) => v === lineArray[i])) {
+            return element;
+          }
+        }
+        return null;
+      }
+      function renderHexagramLines(upper, lower, container, changingPositions = [], forceLines = null) {
         container.innerHTML = '';
         let lines;
+        if (forceLines) {
+          lines = forceLines;
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const v = lines[i];
+            const pos = i + 1;
+            if (v === 1) {
+              const yangDiv = document.createElement('div');
+              yangDiv.className = changingPositions.includes(pos)
+                ? 'yang-line changing-yang'
+                : 'yang-line';
+              container.appendChild(yangDiv);
+            } else {
+              const yinDiv = document.createElement('div');
+              yinDiv.className = 'flex-yin-line';
+              const left = document.createElement('div');
+              left.className = 'flex-yin-seg flex-yin-left';
+              const gap = document.createElement('div');
+              gap.className = 'flex-yin-gap';
+              const right = document.createElement('div');
+              right.className = 'flex-yin-seg flex-yin-right';
+              if (changingPositions.includes(pos)) {
+                left.classList.add('changing-yin');
+                right.classList.add('changing-yin');
+              }
+              yinDiv.appendChild(left);
+              yinDiv.appendChild(gap);
+              yinDiv.appendChild(right);
+              container.appendChild(yinDiv);
+            }
+          }
+          return;
+        }
         if (lower == null) {
           lines = ELEMENTS[upper];
+          if (!lines) return;
           for (let i = 2; i >= 0; i--) {
             const v = lines[i];
             if (v === 1) {
@@ -291,21 +345,11 @@
           }
         }
       }
-
-      function getElementByLines(lines) {
-        for (const [element, lineArray] of Object.entries(ELEMENTS)) {
-          if (lines.length === lineArray.length && lines.every((v, i) => v === lineArray[i])) {
-            return element;
-          }
-        }
-        return '';
-      }
-
       function updateHexagramArea() {
         const upper = upperHexagram.textContent;
         const lower = lowerHexagram.textContent;
         if (upper !== '?' && lower !== '?') {
-          const key = upper + lower; // 修正：上卦在前，下卦在后
+          const key = upper + lower;
           const name = HEXAGRAM_NAMES[key] || `${upper}为${lower}`;
           hexagramName.textContent = name;
           renderHexagramLines(upper, lower, hexagramDiagram);
@@ -316,7 +360,6 @@
           hexagramDescription.textContent = '请选择上下卦查看详细信息';
         }
       }
-
       function updateChangingHexagramArea(upper, lower, changingPositions) {
         changingHexagramName.textContent = '?';
         changingHexagramDiagram.innerHTML = '';
@@ -330,19 +373,23 @@
         });
         const changedUpper = getElementByLines(upperLines);
         const changedLower = getElementByLines(lowerLines);
+        if (!changedUpper || !changedLower) {
+          renderHexagramLines('', '', changingHexagramDiagram, changingPositions, [...lowerLines, ...upperLines]);
+          changingHexagramName.textContent = '-';
+          changingHexagramDescription.textContent = '此卦为特殊变卦（不在基础八卦内），请参考卦爻。';
+          return;
+        }
         renderHexagramLines(changedUpper, changedLower, changingHexagramDiagram, changingPositions);
-        const changedKey = changedUpper + changedLower; // 上卦在前，下卦在后
+        const changedKey = changedUpper + changedLower;
         const name = HEXAGRAM_NAMES[changedKey] || `${changedUpper}为${changedLower}`;
         changingHexagramName.textContent = name;
         changingHexagramDescription.textContent = HEXAGRAM_DESCRIPTIONS[name] || '暂未录入';
       }
-
       function getRandomElement() {
         const keys = Object.keys(ELEMENTS);
         const randomIndex = Math.floor(Math.random() * keys.length);
         return keys[randomIndex];
       }
-
       upperBtn.addEventListener('click', () => {
         upperBtn.classList.add('btn-active');
         setTimeout(() => upperBtn.classList.remove('btn-active'), 150);
@@ -359,8 +406,6 @@
         renderHexagramLines(element, null, lowerHexagramImage);
         updateHexagramArea();
       });
-
-      // 只会有“没有变爻”或“六爻中一爻变”
       changeBtn.addEventListener('click', () => {
         changeBtn.classList.add('btn-active');
         setTimeout(() => changeBtn.classList.remove('btn-active'), 150);
@@ -370,18 +415,11 @@
           alert('请先选择上卦和下卦');
           return;
         }
-        // 0表示没有变爻，1~6表示对应第几爻变
-        const randomNum = Math.floor(Math.random() * 7); // 0~6
-        let changingPositions = [];
-        if (randomNum === 0) {
-          changingLines.textContent = '没有变爻';
-        } else {
-          changingPositions = [randomNum];
-          changingLines.textContent = `第${randomNum}爻变`;
-        }
+        const randomNum = Math.floor(Math.random() * 6) + 1; // 1~6
+        const changingPositions = [randomNum];
+        changingLines.textContent = `第${randomNum}爻变`;
         updateChangingHexagramArea(upper, lower, changingPositions);
       });
-
       resetBtn.addEventListener('click', () => {
         resetBtn.classList.add('btn-active');
         setTimeout(() => resetBtn.classList.remove('btn-active'), 150);
@@ -396,7 +434,89 @@
         changingHexagramDiagram.innerHTML = '';
         hexagramDiagram.innerHTML = '';
         changingHexagramDescription.textContent = '';
+        noteInput.value = '';
       });
+
+      // ----------- 历史记录/笔记功能 -----------
+      function loadHistory() {
+        const raw = localStorage.getItem('boshanqigua_history');
+        return raw ? JSON.parse(raw) : [];
+      }
+      function saveHistory(list) {
+        localStorage.setItem('boshanqigua_history', JSON.stringify(list));
+      }
+      function renderHistory() {
+        const data = loadHistory();
+        if (data.length === 0) {
+          historyArea.innerHTML = '<div class="text-gray-500 text-center">暂无记录</div>';
+          return;
+        }
+        historyArea.innerHTML = data.map((item, idx) => {
+          return `
+            <div class="history-item" data-idx="${idx}">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-lg text-yellow-900">${item.hexagramName}</span>
+                <span class="text-xs text-gray-700">${item.time}</span>
+              </div>
+              <div class="text-sm text-gray-700 mb-1">上卦：${item.upper}　下卦：${item.lower}</div>
+              <div class="mb-2 flex flex-wrap items-center gap-2">
+                <span class="text-xs px-2 py-1 bg-yellow-300/90 rounded">${item.changingText}</span>
+                <span class="text-xs px-2 py-1 bg-yellow-100/80 rounded">变卦：${item.changingHexagramName}</span>
+              </div>
+              <div>
+                <textarea class="note-area" data-edit-idx="${idx}" style="margin-bottom:0">${item.note||''}</textarea>
+                <button data-save-idx="${idx}" class="text-xs bg-green-700 hover:bg-green-600 text-white rounded px-3 py-1 mr-2 mt-1">保存笔记</button>
+                <button data-del-idx="${idx}" class="text-xs bg-red-700 hover:bg-red-600 text-white rounded px-3 py-1 mt-1">删除</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        historyArea.querySelectorAll('[data-del-idx]').forEach(btn=>{
+          btn.onclick = function(){
+            const idx = +this.getAttribute('data-del-idx');
+            const arr = loadHistory();
+            arr.splice(idx,1);
+            saveHistory(arr);
+            renderHistory();
+          }
+        });
+        historyArea.querySelectorAll('[data-save-idx]').forEach(btn=>{
+          btn.onclick = function(){
+            const idx = +this.getAttribute('data-save-idx');
+            const arr = loadHistory();
+            const textarea = historyArea.querySelector('[data-edit-idx="'+idx+'"]');
+            arr[idx].note = textarea.value;
+            saveHistory(arr);
+            renderHistory();
+          }
+        });
+      }
+      saveBtn.addEventListener('click', function(){
+        const upper = upperHexagram.textContent;
+        const lower = lowerHexagram.textContent;
+        const hexagramNameStr = hexagramName.textContent;
+        const changingTextStr = changingLines.textContent;
+        const changingHexagramNameStr = changingHexagramName.textContent;
+        const noteVal = noteInput.value;
+        if (upper === '?' || lower === '?' || hexagramNameStr === '?') {
+          alert('请先起卦');
+          return;
+        }
+        const now = new Date();
+        const timeStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0')
+          + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+        const arr = loadHistory();
+        arr.unshift({
+          upper, lower, hexagramName: hexagramNameStr, 
+          changingText: changingTextStr, changingHexagramName: changingHexagramNameStr,
+          note: noteVal, time: timeStr
+        });
+        saveHistory(arr);
+        renderHistory();
+        noteInput.value = '';
+        alert("保存成功！");
+      });
+      renderHistory();
     });
   </script>
 </body>
